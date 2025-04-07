@@ -19,7 +19,7 @@
 .type nameStr,%gnu_unique_object
     
 /*** STUDENTS: Change the next line to your name!  **/
-nameStr: .asciz "Inigo Montoya"  
+nameStr: .asciz "Javier Ayala"  
 
 .align   /* realign so that next mem allocations are on word boundaries */
  
@@ -84,7 +84,16 @@ final_Product:   .word     0
 asmUnpack:   
     
     /*** STUDENTS: Place your asmUnpack code BELOW this line!!! **************/
+    LSR r3, r0, #16
+    LSL r3, r3, #16
+    ASR r3, r3, #16
+    STR r3, [r1]
     
+    LSL r4, r0, #16
+    ASR r4, r4, #16
+    STR r4, [r2]
+    
+    BX LR
     /*** STUDENTS: Place your asmUnpack code ABOVE this line!!! **************/
 
 
@@ -102,7 +111,25 @@ asmUnpack:
 asmAbs:  
 
     /*** STUDENTS: Place your asmAbs code BELOW this line!!! **************/
+    MOV r3, r0
     
+    CMP r0,#0
+    BGE store_values
+    
+    RSBS r0, r0, #0
+    
+store_values:
+    STR r0, [r1]
+    
+   
+    MOV r4, #0
+    CMP r3, #0
+    BGE store_sign
+    MOV r4, #1
+    
+store_sign:
+    STR r4, [r2]
+    BX LR
 
     /*** STUDENTS: Place your asmAbs code ABOVE this line!!! **************/
 
@@ -118,7 +145,24 @@ asmAbs:
 asmMult:   
 
     /*** STUDENTS: Place your asmMult code BELOW this line!!! **************/
-
+    MOV r2, #0
+    MOV r3, r1
+    MOV r4, r0
+    
+mult_loop:
+    TST r3, #1
+    BEQ skip_add
+    
+    ADD r2, r2, r4
+    
+skip_add:
+    LSR r3, r3, #1
+    LSL r4, r4, #1
+    CMP r3, #0
+    BNE mult_loop
+    
+    MOV r0, r2
+    BX LR
 
     /*** STUDENTS: Place your asmMult code ABOVE this line!!! **************/
 
@@ -140,7 +184,13 @@ asmMult:
 asmFixSign:   
     
     /*** STUDENTS: Place your asmFixSign code BELOW this line!!! **************/
-
+    EOR r3, r1, r2
+    CMP r3, #0
+    BEQ done_fix
+    
+    RSBS r0, r0, #0
+done_fix:
+    BX LR
     
     /*** STUDENTS: Place your asmFixSign code ABOVE this line!!! **************/
 
@@ -170,21 +220,29 @@ asmMain:
      * call asmUnpack. Have it store the output values in a_Multiplicand
      * and b_Multiplier.
      */
-
+    LDR r1, =a_Multiplicand
+    LDR r2, =b_Multiplier
+    BL asmUnpack
 
      /* Step 2a:
       * call asmAbs for the multiplicand (a). Have it store the absolute value
       * in a_Abs, and the sign in a_Sign.
       */
-
-
+    LDR r0, =a_Multiplicand
+    LDR r0, [r0]
+    LDR r1, =a_Abs
+    LDR r2, =a_Sign
+    BL asmAbs
 
      /* Step 2b:
       * call asmAbs for the multiplier (b). Have it store the absolute value
       * in b_Abs, and the sign in b_Sign.
       */
-
-
+    LDR r0, =b_Multiplier
+    LDR r0, [r0]
+    LDR r1, =b_Abs
+    LDR r2, =b_Sign
+    BL asmAbs
 
     /* Step 3:
      * call asmMult. Pass a_Abs as the multiplicand, 
@@ -193,6 +251,14 @@ asmMain:
      * In this function (asmMain), store the output value  
      * returned asmMult in r0 to mem location init_Product.
      */
+    LDR r3, =a_Abs
+    LDR r0, [r3]
+    LDR r4, =b_Abs
+    LDR r1, [r4]
+    BL asmMult
+    
+    LDR r2, =init_Product
+    STR r0, [r2]
 
 
     /* Step 4:
@@ -202,14 +268,23 @@ asmMain:
      * sign. Store the value returned in r0 to mem location 
      * final_Product.
      */
-
-
+    LDR r1, =a_Sign
+    LDR r1, [r1]
+    LDR r2, =b_Sign
+    LDR r2, [r2]
+    BL asmFixSign
+    
+    LDR r1, =final_Product
+    STR r0, [r1]
+    
      /* Step 5:
       * END! Return to caller. Make sure of the following:
       * 1) Stack has been correctly managed.
       * 2) the final answer is stored in r0, so that the C call 
       *    can access it.
       */
+     LDR r0, [r1]
+     BX LR
 
 
     
