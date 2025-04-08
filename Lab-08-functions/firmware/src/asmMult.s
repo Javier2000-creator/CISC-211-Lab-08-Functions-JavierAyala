@@ -216,6 +216,7 @@ asmMain:
     
     /*** STUDENTS: Place your asmMain code BELOW this line!!! **************/
     
+    PUSH {LR}
     /* Step 1:
      * call asmUnpack. Have it store the output values in a_Multiplicand
      * and b_Multiplier.
@@ -268,6 +269,7 @@ asmMain:
      * sign. Store the value returned in r0 to mem location 
      * final_Product.
      */
+    
     LDR r1, =a_Sign
     LDR r1, [r1]
     LDR r2, =b_Sign
@@ -283,8 +285,8 @@ asmMain:
       * 2) the final answer is stored in r0, so that the C call 
       *    can access it.
       */
-     LDR r0, [r1]
-     BX LR
+    POP {LR}
+    BX LR
 
 
     
