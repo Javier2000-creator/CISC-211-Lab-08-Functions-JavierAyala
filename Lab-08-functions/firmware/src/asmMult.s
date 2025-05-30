@@ -84,16 +84,20 @@ final_Product:   .word     0
 asmUnpack:   
     
     /*** STUDENTS: Place your asmUnpack code BELOW this line!!! **************/
-    LSR r3, r0, #16
-    LSL r3, r3, #16
-    ASR r3, r3, #16
-    STR r3, [r1]
     
-    LSL r4, r0, #16
-    ASR r4, r4, #16
-    STR r4, [r2]
+    //this extracts the upper 16 bits by right shifting.
+    LSR r3, r0, #16  //moves upper 16 bits to lower half
+    LSL r3, r3, #16  //clears out upper bits by shifting left
+    ASR r3, r3, #16  //arithmetic shift right to sign extend
+    STR r3, [r1]     //stores upper bits into memory location pointed by r1
     
-    BX LR
+    //this extracts the lower 16 bits and then sign enxtending to 32 bit.
+    LSL r4, r0, #16  //shifts lower 16 bits into upper half.
+    ASR r4, r4, #16  //the program will sign extend to 32 bit.
+    STR r4, [r2]     // this stores the 16 bits that were shifted into upper half
+                     // into memory location pointed by r2.
+    
+    BX LR  // returns from function
     /*** STUDENTS: Place your asmUnpack code ABOVE this line!!! **************/
 
 
@@ -111,25 +115,26 @@ asmUnpack:
 asmAbs:  
 
     /*** STUDENTS: Place your asmAbs code BELOW this line!!! **************/
-    MOV r3, r0
+    MOV r3, r0  //copying input to r3 to preserve original sign
     
-    CMP r0,#0
-    BGE store_values
+    CMP r0,#0  
+    BGE store_values // compares r0 to see if it is >= 0, if so then skips negation
     
-    RSBS r0, r0, #0
+    RSBS r0, r0, #0  //if the value comes out to be negative, we get its
+                     // absolute value by reversing the sign
     
 store_values:
-    STR r0, [r1]
+    STR r0, [r1]  //stores the absolute value
     
    
-    MOV r4, #0
+    MOV r4, #0    //assumes that the sign is positive
     CMP r3, #0
     BGE store_sign
-    MOV r4, #1
+    MOV r4, #1    // updates to 1 if the original sign was negative
     
 store_sign:
-    STR r4, [r2]
-    BX LR
+    STR r4, [r2]  //this stores the sign bit
+    BX LR  // returns from function
 
     /*** STUDENTS: Place your asmAbs code ABOVE this line!!! **************/
 
@@ -145,24 +150,24 @@ store_sign:
 asmMult:   
 
     /*** STUDENTS: Place your asmMult code BELOW this line!!! **************/
-    MOV r2, #0
-    MOV r3, r1
-    MOV r4, r0
+    MOV r2, #0 
+    MOV r3, r1  //copies multiplier to r3 so we can shift it
+    MOV r4, r0  //copies multiplicand to r4
     
 mult_loop:
-    TST r3, #1
-    BEQ skip_add
+    TST r3, #1  //tests if the lowest bit is 1
+    BEQ skip_add  //if it is 0 then it will skip the add step
     
-    ADD r2, r2, r4
+    ADD r2, r2, r4  //adds multiplicand to result
     
 skip_add:
-    LSR r3, r3, #1
-    LSL r4, r4, #1
-    CMP r3, #0
-    BNE mult_loop
+    LSR r3, r3, #1  //this shifts the multiplier right by 1
+    LSL r4, r4, #1  //shifts multiplicand left by 1
+    CMP r3, #0  
+    BNE mult_loop  //loop until all bits are processed
     
-    MOV r0, r2
-    BX LR
+    MOV r0, r2  // the result now moves into r0
+    BX LR  // returns from function
 
     /*** STUDENTS: Place your asmMult code ABOVE this line!!! **************/
 
@@ -184,13 +189,14 @@ skip_add:
 asmFixSign:   
     
     /*** STUDENTS: Place your asmFixSign code BELOW this line!!! **************/
+    //we are comparing the sign bits and if they are different, the product should be negative
     EOR r3, r1, r2
     CMP r3, #0
-    BEQ done_fix
+    BEQ done_fix  //if the sign is the same, then it is done
     
-    RSBS r0, r0, #0
+    RSBS r0, r0, #0 //if the sign is different, negate the product
 done_fix:
-    BX LR
+    BX LR  //return from function
     
     /*** STUDENTS: Place your asmFixSign code ABOVE this line!!! **************/
 
@@ -216,11 +222,15 @@ asmMain:
     
     /*** STUDENTS: Place your asmMain code BELOW this line!!! **************/
     
-    PUSH {LR}
+    PUSH {LR}  //this stores the original return adress on the stack
     /* Step 1:
      * call asmUnpack. Have it store the output values in a_Multiplicand
      * and b_Multiplier.
      */
+    
+    //This makes sure that the upper 16 bits go into the multiplicand
+    //and the lower 16 bits will go into the multiplier so that we separate 
+    // the two operands for the other functions
     LDR r1, =a_Multiplicand
     LDR r2, =b_Multiplier
     BL asmUnpack
@@ -229,16 +239,26 @@ asmMain:
       * call asmAbs for the multiplicand (a). Have it store the absolute value
       * in a_Abs, and the sign in a_Sign.
       */
+     
+     //This will give us the absolute value of the multiplicand plus it
+     //will determine if it is negative or positive. We use absolute values
+     //because when using shift and add, it's going to assume we're using
+     //positive numbers. Later we will fix the sign.
     LDR r0, =a_Multiplicand
-    LDR r0, [r0]
-    LDR r1, =a_Abs
-    LDR r2, =a_Sign
-    BL asmAbs
+    LDR r0, [r0]  //loads the actual value into r0
+    LDR r1, =a_Abs  //r1 will store the absolute value
+    LDR r2, =a_Sign  // r2 will store the sign(0 for positive or 1 for negative)
+    BL asmAbs  // calls the asmAbs function
 
      /* Step 2b:
       * call asmAbs for the multiplier (b). Have it store the absolute value
       * in b_Abs, and the sign in b_Sign.
       */
+    
+     //This is the same thing as above, which will give us the absolute value of the multiplier plus it
+     //will determine if it is negative or positive. We use absolute values
+     //because when using shift and add, it's going to assume we're using
+     //positive numbers. Later we will fix the sign.
     LDR r0, =b_Multiplier
     LDR r0, [r0]
     LDR r1, =b_Abs
@@ -252,12 +272,17 @@ asmMain:
      * In this function (asmMain), store the output value  
      * returned asmMult in r0 to mem location init_Product.
      */
+    
+    //Now this will perform the multiplication which only works with
+    //non-negative values, so we are using the absolute values taken in 
+    //the previous function
     LDR r3, =a_Abs
     LDR r0, [r3]
     LDR r4, =b_Abs
     LDR r1, [r4]
     BL asmMult
     
+    //this will save the product for use in the next step which fixes the sign
     LDR r2, =init_Product
     STR r0, [r2]
 
@@ -270,6 +295,8 @@ asmMain:
      * final_Product.
      */
     
+    //This step will fix the sign since we have the absolute multiplication 
+    //product. 
     LDR r1, =a_Sign
     LDR r1, [r1]
     LDR r2, =b_Sign
@@ -277,7 +304,7 @@ asmMain:
     BL asmFixSign
     
     LDR r1, =final_Product
-    STR r0, [r1]
+    STR r0, [r1]  //stores the final signed product
     
      /* Step 5:
       * END! Return to caller. Make sure of the following:
@@ -285,8 +312,8 @@ asmMain:
       * 2) the final answer is stored in r0, so that the C call 
       *    can access it.
       */
-    POP {LR}
-    BX LR
+    POP {LR}  //this will restore the original return adsress 
+    BX LR //returns to caller
 
 
     
